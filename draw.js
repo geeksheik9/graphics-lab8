@@ -11,21 +11,18 @@ var colorBuffer;
 var program;
 
 var vertexColors = [];
-var vertices = [];
-
 
 var offset = 0;
 
 var width = 0.0;
 var height = 0.0;
 
-var rotatingX = false;
-var rotatingY = false;
-var rotatingZ= false;
+var orthoMat = [];
 
-var eye = vec3(0,0,0);
-var camera = vec3(0,0,0);
-var lookAt = vec3(0,0,0);
+
+var eye = vec3(0,0,-1);
+var at = vec3(0,0,0);
+var up = vec3(0,1,0);
 
 window.onload = function init() {
 
@@ -61,13 +58,18 @@ window.onload = function init() {
 
 	colorLoc = gl.getUniformLocation(program, "vertColor");
 
+	mvmLoc = gl.getUniformLocation(program, 'mvm');
+	orthoLoc = gl.getUniformLocation(program, 'ortho')
+
+	orthoMat = ortho(-100, 100, -100, 100, 200, -200);
+
 	iBuffer = gl.createBuffer();
 	gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, iBuffer);
 	gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, new Uint8Array(teapot_indices), gl.STATIC_DRAW);
 
 	vBuffer = gl.createBuffer();
 	gl.bindBuffer(gl.ARRAY_BUFFER, vBuffer);
-	gl.bufferData(gl.ARRAY_BUFFER, flatten(vertices), gl.STATIC_DRAW);
+	gl.bufferData(gl.ARRAY_BUFFER, flatten(teapot_vertices), gl.STATIC_DRAW);
 	vPosition = gl.getAttribLocation(program, "vPosition");
 	gl.vertexAttribPointer(vPosition, 3, gl.FLOAT, false, 0, 0);
 	gl.enableVertexAttribArray(vPosition);
@@ -80,7 +82,6 @@ window.onload = function init() {
 	var vColor = gl.getAttribLocation(program, "vColor");
 	gl.vertexAttribPointer(vColor, 4, gl.FLOAT, false, 0 , 0);
 	gl.enableVertexAttribArray(vColor)
-
 
 	gl.clearDepth(1.0);
 	gl.enable(gl.DEPTH_TEST);
@@ -97,59 +98,36 @@ function addColors(){
     }
 }
 
-function ortho(left, right, top, bottom, near, far){
-	/*midX = (left + right) / 2;
-	midY = (bottom + top) / 2;
-	midZ = (-near - far) /2;
-	centerMat = center(midX,midY,midZ);
-	console.log(centerMat);
-
-	scaleX = 2.0 / (right-left);
-	scaleY = 2.0 / (top-bottom);
-	scaleZ = 2.0 / (far-near);
-	scaleMat = scale3d(scaleX,scaleY,scaleZ);
-	console.log(scaleMat);
-
-	leftMat = convertLeft();
-	console.log(leftMat);
-
-	mat1 = mult(centerMat, scaleMat);
-	mat2 = mult(mat1, leftMat);
-
-	return mat2*/
-	return mat4(
-		2/(right-left),0,0,-((right+left)/(right-left)),
-		0,2/(top-bottom),0,-((top+bottom)/(top-bottom)),
-		0,0,(-2/(far-near)),-((far+near)/(far-near)),
-		0,0,0,1
+function ortho(left, right, bottom, top, near, far){
+	var M = mat4(
+		vec4(1.0,0.0,0.0,0.0),
+		vec4(0.0,1.0,0.0,0.0),
+		vec4(0.0,0.0,0.0,0.0),
+		vec4(0.0,0.0,0.0,1.0)
 	)
+	var N = mat4(
+		vec4(2/(right-left),0.0,0.0,(-(right+left)/(right-left))),
+		vec4(0.0,2/(top-bottom),0.0,(-(top+bottom)/(top-bottom))),
+		vec4(0.0,0.0,-2/(far-near),((far+near)/(far-near))),
+		vec4(0.0,0.0,0.0,1)
+	)
+
+	return mult(M, N)
 }
 
-function center(x,y,z) {
-	return mat4(
-		1,0,0,-x,
-		0,1,0,-y,
-		0,0,1,-z,
-		0,0,0,1
-	)
-}
+function lookAt(eye, at , up){
+	vpn = subtract(at, eye);
+	n = normalize(vpn, false);
+	console.log(n)
 
-function scale3d(x,y,z){
-	return mat4(
-		x,0,0,0,
-		0,y,0,0,
-		0,0,z,0,
-		0,0,0,1
-	)
-}
+	preU = cross(up, n);
+	u = normalize(preU,false);
+	console.log(u)
 
-function convertLeft(){
-	return mat4(
-		1,0,0,0,
-		0,1,0,0,
-		0,0,-1,0,
-		0,0,0,1
-	)
+	preV = cross(n, u)
+	v = normalize(preV, false);
+
+	return v
 }
 
 function render() {
@@ -157,11 +135,11 @@ function render() {
 
 	// clear the display with the background color
     gl.clear( gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
-	resp = ortho(-1, 1, -1, 1, -1, 1)
-	console.log(resp); 
+
+	gl.uniformMatrix4fv(orthoLoc, false, flatten(orthoMat));
 
 	//gl.uniform3fv(thetaLoc, theta);
-	gl.drawElements(gl.TRIANGLES, teapot_vertices.length * 3, gl.UNSIGNED_BYTE, 0)
+	gl.drawElements(gl.TRIANGLES, 1500 , gl.UNSIGNED_BYTE, 0)
 
     setTimeout(
         function (){requestAnimFrame(render);}, delay
@@ -170,7 +148,33 @@ function render() {
 
 function setCamera(input){
 	switch(input){
-    
+		case '+X':
+			eye = vec3(1,0,0);
+			break;
+		case '-X':
+			eye = vec3(-1,0,0);
+			break;
+		case '+Y':
+			eye = vec3(0,1,0);
+			break;
+		case '-Y':
+			eye = vec3(0,-1,0);
+			break;
+		case '+Z':
+			eye = vec3(0,0,1);
+			break;
+		case '-Z':
+			eye = vec3(0,0,-1);
+			break;
+		case 'UL':
+			eye = vec3(-1,1,0);
+			break;
+		case 'UR':
+			eye = vec3(1,1,0);
+			break;
+		default:
+			console.log("that aint it fam")
+			break;
     }
 }
 
