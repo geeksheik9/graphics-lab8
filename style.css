@@ -6,6 +6,12 @@ button {
   min-width: 50px;
   min-height: 25px;
   padding: 10px 10px 10px 10px;
+  margin-left: 5px;
+}
+
+button:focus {
+  border-color: chartreuse;
+  box-shadow: 5px 5px 5px black;
 }
 
 .red {

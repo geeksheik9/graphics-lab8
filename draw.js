@@ -2,20 +2,13 @@
 // some globals
 var gl;
 
-
 var delay = 100;
-var direction = true;
 var iBuffer;
 var vBuffer;
 var colorBuffer;
 var program;
 
 var vertexColors = [];
-
-var offset = 0;
-
-var width = 0.0;
-var height = 0.0;
 
 var eye = vec3(0,0,1);
 var at = vec3(0,0,-1);
@@ -25,11 +18,8 @@ window.onload = function init() {
 
 	// get the canvas handle from the document's DOM
     var canvas = document.getElementById( "gl-canvas" );
-	height = canvas.height
-	width = canvas.width
 	// initialize webgl
     gl = WebGLUtils.setupWebGL(canvas);
-
 	// check for errors
     if ( !gl ) { 
 		alert("WebGL isn't available"); 
@@ -51,10 +41,7 @@ window.onload = function init() {
 	// Get a handle to theta  - this is a uniform variable defined 
 	// by the user in the vertex shader, the second parameter should match
 	// exactly the name of the shader variable
-    thetaLoc = gl.getUniformLocation(program, "theta");
-
 	colorLoc = gl.getUniformLocation(program, "vertColor");
-
 	mvmLoc = gl.getUniformLocation(program, 'mvm');
 	orthoLoc = gl.getUniformLocation(program, 'ortho')
 
@@ -117,7 +104,6 @@ function lookAt(eye, at, up)
 
 function render() {
 	// this is render loop
-
 	// clear the display with the background color
     gl.clear( gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
 
