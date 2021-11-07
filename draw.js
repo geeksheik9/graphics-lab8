@@ -17,11 +17,8 @@ var offset = 0;
 var width = 0.0;
 var height = 0.0;
 
-var orthoMat = [];
-
-
-var eye = vec3(0,0,-1);
-var at = vec3(0,0,0);
+var eye = vec3(0,0,1);
+var at = vec3(0,0,-1);
 var up = vec3(0,1,0);
 
 window.onload = function init() {
@@ -61,11 +58,9 @@ window.onload = function init() {
 	mvmLoc = gl.getUniformLocation(program, 'mvm');
 	orthoLoc = gl.getUniformLocation(program, 'ortho')
 
-	orthoMat = ortho(-100, 100, -100, 100, 200, -200);
-
 	iBuffer = gl.createBuffer();
 	gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, iBuffer);
-	gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, new Uint8Array(teapot_indices), gl.STATIC_DRAW);
+	gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, new Uint16Array(teapot_indices), gl.STATIC_DRAW);
 
 	vBuffer = gl.createBuffer();
 	gl.bindBuffer(gl.ARRAY_BUFFER, vBuffer);
@@ -93,41 +88,31 @@ window.onload = function init() {
 function addColors(){
     for(let i = 0; i < teapot_vertices.length; i++){
         vertexColors.push([Math.random(), Math.random(), Math.random(), 1])
-        vertexColors.push([Math.random(), Math.random(), Math.random(), 1])
-        vertexColors.push([Math.random(), Math.random(), Math.random(), 1])
     }
 }
 
 function ortho(left, right, bottom, top, near, far){
-	var M = mat4(
-		vec4(1.0,0.0,0.0,0.0),
-		vec4(0.0,1.0,0.0,0.0),
-		vec4(0.0,0.0,0.0,0.0),
-		vec4(0.0,0.0,0.0,1.0)
+	return mat4(
+		vec4(2/(right-left),0,0,(-(right+left)/(right-left))),
+		vec4(0,2/(top-bottom),0,(-(top+bottom)/(top-bottom))),
+		vec4(0,0,-2/(far-near),((far+near)/(far-near))),
+		vec4(0,0,0,1)
 	)
-	var N = mat4(
-		vec4(2/(right-left),0.0,0.0,(-(right+left)/(right-left))),
-		vec4(0.0,2/(top-bottom),0.0,(-(top+bottom)/(top-bottom))),
-		vec4(0.0,0.0,-2/(far-near),((far+near)/(far-near))),
-		vec4(0.0,0.0,0.0,1)
-	)
-
-	return mult(M, N)
 }
 
-function lookAt(eye, at , up){
-	vpn = subtract(at, eye);
-	n = normalize(vpn, false);
-	console.log(n)
+function lookAt(eye, at, up)
+{
+	n = normalize(subtract(at , eye));
+    u = cross(n , normalize(up));
+    v = cross(u , n);
+    cam = mat4(
+		vec4(u[0], u[1], u[2], 0),
+        vec4(v[0], v[1], v[2], 0),
+        vec4(n[0], n[1], n[2], 0),
+        vec4(0 , 0 , 0 , 1)
+		);
 
-	preU = cross(up, n);
-	u = normalize(preU,false);
-	console.log(u)
-
-	preV = cross(n, u)
-	v = normalize(preV, false);
-
-	return v
+    return mult(cam, translate3d(-eye[0], -eye[1], -eye[2]));
 }
 
 function render() {
@@ -136,10 +121,10 @@ function render() {
 	// clear the display with the background color
     gl.clear( gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
 
-	gl.uniformMatrix4fv(orthoLoc, false, flatten(orthoMat));
+	gl.uniformMatrix4fv(mvmLoc, false, flatten(lookAt(eye, at, up)));
+	gl.uniformMatrix4fv(orthoLoc, false, flatten(ortho(-100, 100, -100, 100, 100, -100)));
 
-	//gl.uniform3fv(thetaLoc, theta);
-	gl.drawElements(gl.TRIANGLES, 1500 , gl.UNSIGNED_BYTE, 0)
+    gl.drawElements(gl.TRIANGLES, teapot_indices.length, gl.UNSIGNED_SHORT, 0);
 
     setTimeout(
         function (){requestAnimFrame(render);}, delay
@@ -150,27 +135,43 @@ function setCamera(input){
 	switch(input){
 		case '+X':
 			eye = vec3(1,0,0);
+			at = vec3(-1,0,0);
+			up = vec3(0,1,0);
 			break;
 		case '-X':
 			eye = vec3(-1,0,0);
+			at = vec3(1,0,0);
+			up = vec3(0,1,0);
 			break;
 		case '+Y':
 			eye = vec3(0,1,0);
+			at = vec3(0,-1,0);
+			up = vec3(0,0,-1)
 			break;
 		case '-Y':
 			eye = vec3(0,-1,0);
+			at = vec3(0,1,0);
+			up = vec3(0,0,-1);
 			break;
 		case '+Z':
 			eye = vec3(0,0,1);
+			at = vec3(0,0,-1);
+			up = vec3(0,1,0);
 			break;
 		case '-Z':
 			eye = vec3(0,0,-1);
+			at = vec3(0,0,1);
+			up = vec3(0,1,0);
 			break;
 		case 'UL':
-			eye = vec3(-1,1,0);
+			eye = vec3(-1,1,0.5);
+			at = vec3(1,-1,-0.5);
+			up = vec3(0,1,0);
 			break;
 		case 'UR':
-			eye = vec3(1,1,0);
+			eye = vec3(1,1,0.5);
+			at = vec3(-1,-1,-0.5);
+			up = vec3(0,1,0);
 			break;
 		default:
 			console.log("that aint it fam")
@@ -178,3 +179,11 @@ function setCamera(input){
     }
 }
 
+function translate3d (tx, ty, tz) {
+	return mat4( 	
+		vec4(1, 0, 0, tx),
+		vec4(0, 1, 0, ty),
+		vec4(0, 0, 1, tz),
+		vec4(0, 0, 0, 1)
+	);
+}

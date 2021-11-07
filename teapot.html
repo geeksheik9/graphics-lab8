@@ -3,7 +3,7 @@
 
 <link rel="stylesheet" type="text/css" href="./style.css" />
 
-<title>Rotating Squares</title>
+<title>Utah Teapot</title>
 
 <script id="vertex-shader" type="x-shader/x-vertex">
 attribute vec3 vPosition;
@@ -19,7 +19,7 @@ varying vec4 fColor;
 
 void main() {
 	fColor = vColor;
-	gl_Position =  ortho * vec4(vPosition,1.0);
+	gl_Position = ortho * mvm * vec4(vPosition,1.0);
 }
 </script>
 
