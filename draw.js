@@ -87,8 +87,7 @@ function ortho(left, right, bottom, top, near, far){
 	)
 }
 
-function lookAt(eye, at, up)
-{
+function lookAt(eye, at, up){
 	n = normalize(subtract(at , eye));
     u = cross(n , normalize(up));
     v = cross(u , n);
